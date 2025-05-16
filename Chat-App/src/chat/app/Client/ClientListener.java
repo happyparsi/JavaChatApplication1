@@ -12,7 +12,7 @@ public class ClientListener implements Runnable {
     public ClientListener(BufferedReader in) {
         this.in = in;
     }
-    
+
     public void setChatUI(ChatUI chatUI) {
         this.chatUI = chatUI;
     }

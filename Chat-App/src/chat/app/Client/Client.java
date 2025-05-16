@@ -16,7 +16,8 @@ public class Client {
     private boolean isAuthenticated = false;
     
     public Client() throws IOException {
-        socket = new Socket("localhost", 4999);
+        socket = new Socket("localhost", 12345);
+
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }

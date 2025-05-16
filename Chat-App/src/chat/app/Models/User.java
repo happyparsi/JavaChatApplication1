@@ -56,4 +56,7 @@ public class User {
     public boolean isUserOnline() {
         return this.userSocket.isClosed();
     }
+
+    public void setName(String username) {
+    }
 }

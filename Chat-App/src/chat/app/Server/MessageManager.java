@@ -4,54 +4,80 @@ import chat.app.Models.User;
 import java.io.PrintWriter;
 
 public class MessageManager {
-            
-   public static String serverResponseFormatter(String message){
-         return " [" + Server.getServerTime() + " Server]  " + message;
+
+    /**
+     * Formats messages sent by the server with a timestamp and "[Server]" tag.
+     */
+    public static String serverResponseFormatter(String message) {
+        return " [" + Server.getServerTime() + " Server]  " + message;
     }
-    
+
+    /**
+     * Formats messages sent by clients with a timestamp and sender's name.
+     */
     public static String clientMessageFormatter(String message, String senderName) {
-         return " [" + Server.getServerTime() + " " + senderName + "]  " +  message;
-     }
-    
+        return " [" + Server.getServerTime() + " " + senderName + "]  " + message;
+    }
+
+    /**
+     * Sends a server message to the given PrintWriter.
+     */
     public static void messageSenderAsServer(PrintWriter writer, String message) {
         writer.println(serverResponseFormatter(message));
+        writer.flush();
     }
-    
+
+    /**
+     * Sends a client message to the given PrintWriter.
+     */
     public static void messageSenderAsClient(PrintWriter writer, String message) {
-        //TODO
+        writer.println(message);
+        writer.flush();
     }
-    
-    //Group message
-    public static void sendGroupMessage(String message, User user) {
-        for(User person : user.getGroup().getGroupUsers()) {
-            
-            String finalMessage = clientMessageFormatter(message, "(Group " + user.getGroup().getGroupName() + ") "+ user.getName());
-            
-            person.getWriter().println(finalMessage);
+
+    /**
+     * Sends a message to all users in the same group as the sender.
+     */
+    public static void sendGroupMessage(String message, User sender) {
+        String finalMessage = clientMessageFormatter(message, "(Group " + sender.getGroup().getGroupName() + ") " + sender.getName());
+
+        for (User person : sender.getGroup().getGroupUsers()) {
+            PrintWriter pw = person.getWriter();
+            pw.println(finalMessage);
+            pw.flush();
         }
     }
-    // Broadcast message
-    public static void sendBroadcastMessage(String message, User user){
-         for (User person : Server.getServerUserList()) {
-             
-            String finalMessage = MessageManager.clientMessageFormatter(message, user.getName());
-            
-            person.getWriter().println(finalMessage);
-         }
+
+    /**
+     * Broadcasts a message to all connected users.
+     */
+    public static void sendBroadcastMessage(String message, User sender) {
+        String finalMessage = clientMessageFormatter(message, sender.getName());
+
+        for (User person : Server.getServerUserList()) {
+            PrintWriter pw = person.getWriter();
+            pw.println(finalMessage);
+            pw.flush();
+        }
     }
-    //Private message
-    public static void sendPrivateMessage(String message, User receiver, User sender){
-         String finalMessage = clientMessageFormatter(message, sender.getName());
-         
-         receiver.getWriter().println(finalMessage);
+
+    /**
+     * Sends a private message from sender to receiver.
+     */
+    public static void sendPrivateMessage(String message, User receiver, User sender) {
+        String finalMessage = clientMessageFormatter(message, sender.getName());
+        PrintWriter pw = receiver.getWriter();
+        pw.println(finalMessage);
+        pw.flush();
     }
-    
-        //Private message
-    public static void sendLoadedMessages(String message, User receiver, String sender, String messageTime){
-         String finalMessage = " [" + messageTime + " " + sender + "]  " +  message;
-         
-         receiver.getWriter().println(finalMessage);
+
+    /**
+     * Sends a loaded (historical) message to a user with given timestamp and sender name.
+     */
+    public static void sendLoadedMessages(String message, User receiver, String sender, String messageTime) {
+        String finalMessage = " [" + messageTime + " " + sender + "]  " + message;
+        PrintWriter pw = receiver.getWriter();
+        pw.println(finalMessage);
+        pw.flush();
     }
 }
-        
-    

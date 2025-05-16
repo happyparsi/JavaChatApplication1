@@ -1,93 +1,96 @@
 package chat.app.Server;
 
-import chat.app.Database.DBManager;
 import chat.app.Models.Group;
 import chat.app.Models.User;
+import chat.app.Database.DBManager;
+
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.time.LocalDateTime;
 
 public class Server {
-    // Server client capacity
-    private static int SERVET_LIMIT = 20;
-    // Server port number
-    private static int SERVER_PORT_NO = 4999;
-    // Stores all user information seperately
-    private static List <User> userList;
-    // All client names, so we can check for duplicates upon registration
-    private static List<Group> groupList;
-    
-    //Get server group list
-    public static List<Group> getServerGroupList(){
-        return groupList;
-    }
-    //Get server userdata list
-    public static List<User> getServerUserList(){
-        return userList;
-    }
-    //Add group to groupList
-    public static void addServerGroupList(Group newGroup){
-        groupList.add(newGroup);
-    }
-    //Add user to userList
-    public static void addServerUserList(User newUser){
-        userList.add(newUser);
-    }
-    //Remove from group list
-    public static void removeFromGroupList(String groupName) {
-        for (Group group : groupList) {
-            if (group.getGroupName().equals(groupName)) {
-                groupList.remove(group);
-                return;
-            }
-        }
-    }
-    //Remove from user list
-    public static void removeFromUserList(User user) {
-        userList.remove(user);
-    }
-    //Controls whether user exist or not
-    public static User isUserExist(String userName) {
-        for (User user : userList) {
-            if (userName.equals(user.getName())){
-                return user;
-            }
-        }
-        return null;
-    }
-    //Controls whether group exist or not
-    public static Group isGroupExist(String groupName){
-        for (Group group : groupList) {
-            if (group.getGroupName().equals(groupName)){
-                return group;
-            }
-        }
-        return null;
-    }
-    //Return servertime as string
-    public static String getServerTime(){
-        return LocalDateTime.now().getHour() + ":" + LocalDateTime.now().getMinute();
-    }
-    
-    public static void main(String[] args) throws Exception{
-        try (var listener = new ServerSocket(SERVER_PORT_NO)) {
-            // Server starts message
-            String message = MessageManager.serverResponseFormatter("The chat server is running..");
-            System.out.println(message);
-            // Initialize the user data list
-            userList = new ArrayList<User>();
-            // Initialize name list
-            groupList = new ArrayList<Group>();
-            // Create new thread the pool
-            var pool = Executors.newFixedThreadPool(SERVET_LIMIT);
-            //Connect the DB
-            DBManager.ConnectDB();
+
+    private static final List<User> serverUserList = new ArrayList<>();
+    private static final List<Group> serverGroupList = new ArrayList<>();
+
+    private static long serverStartTime = System.currentTimeMillis();
+
+    public static void main(String[] args) {
+        int port = 12345; // Example port
+
+        // Initialize database connection once here before anything else
+        DBManager.ConnectDB();
+
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("Server started on port " + port);
 
             while (true) {
-                pool.execute(new ClientHandler(listener.accept()));
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New client connected: " + clientSocket);
+
+                ClientHandler clientHandler = new ClientHandler(clientSocket);
+                Thread thread = new Thread(clientHandler);
+                thread.start();
             }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    public static synchronized void addServerUserList(User user) {
+        if (!serverUserList.contains(user)) {
+            serverUserList.add(user);
+            System.out.println("User added: " + user.getName());
+        }
+    }
+
+    public static synchronized void removeFromUserList(User user) {
+        serverUserList.remove(user);
+        System.out.println("User removed: " + user.getName());
+    }
+
+    public static synchronized User isUserExist(String username) {
+        return serverUserList.stream()
+                .filter(u -> u.getName() != null && u.getName().equalsIgnoreCase(username))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static synchronized void addServerGroupList(Group group) {
+        if (!serverGroupList.contains(group)) {
+            serverGroupList.add(group);
+            System.out.println("Group added: " + group.getGroupName());
+        }
+    }
+
+    public static synchronized void removeFromGroupList(String groupName) {
+        serverGroupList.removeIf(g -> g.getGroupName().equalsIgnoreCase(groupName));
+        System.out.println("Group removed: " + groupName);
+    }
+
+    public static synchronized Group isGroupExist(String groupName) {
+        return serverGroupList.stream()
+                .filter(g -> g.getGroupName().equalsIgnoreCase(groupName))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static String getServerTime() {
+        // Return current server time as a string, e.g. formatted date/time
+        return java.time.LocalDateTime.now().toString();
+    }
+
+    public static synchronized List<User> getServerUserList() {
+        return new ArrayList<>(serverUserList);
+    }
+
+    public static long getServerStartTime() {
+        return serverStartTime;
+    }
+
+    public static void setServerStartTime(long serverStartTime) {
+        Server.serverStartTime = serverStartTime;
     }
 }

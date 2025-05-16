@@ -3,21 +3,28 @@ package chat.app.Server;
 import chat.app.Models.User;
 import java.sql.SQLException;
 
-public class ServerRouter {    
-    
+public class ServerRouter {
+
     private CommandManager executer;
-    
+
     public ServerRouter(User user) {
-         executer = new CommandManager(user);
-         System.out.println(user.getSocket().toString() + " fasfsa");
+        this.executer = new CommandManager(user);
+        System.out.println(user.getSocket().toString() + " connected.");
     }
 
     public boolean Route(String command) throws SQLException {
-        if (command.replaceAll(" ", "").equals("/quit")) {
+        if (command == null || command.isBlank()) {
+            executer.command_unknown();
+            return true;
+        }
+
+        String trimmedCommand = command.replaceAll(" ", "");
+
+        if (trimmedCommand.equals("/quit")) {
             executer.command_quit();
             return false;
         }
-        else if (command.replaceAll(" ", "").equals("/singleUser")) {
+        else if (trimmedCommand.equals("/singleUser")) {
             executer.command_singleUser();
             return true;
         }
@@ -25,7 +32,7 @@ public class ServerRouter {
             executer.command_group(command);
             return true;
         }
-        else if (command.replaceAll(" ", "").equals("/createGroup")) {
+        else if (trimmedCommand.equals("/createGroup")) {
             executer.command_createGroup();
             return true;
         }
@@ -33,12 +40,12 @@ public class ServerRouter {
             executer.command_allUser(command);
             return true;
         }
-        else if (command.replaceAll(" ", "").equals("/assignName")) {
-            executer.command_assingName();
+        else if (trimmedCommand.equals("/assignName")) {
+            executer.command_assignName();
             return true;
         }
         else {
-            executer.command_unkown();
+            executer.command_unknown();
             return true;
         }
     }
