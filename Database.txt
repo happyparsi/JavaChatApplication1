@@ -1,55 +1,81 @@
 -- Create the database
 CREATE DATABASE IF NOT EXISTS chatappdb;
+
+-- Use the database
 USE chatappdb;
+
+-- Drop existing tables
+DROP TABLE IF EXISTS messagelist;
+DROP TABLE IF EXISTS group_members;
+DROP TABLE IF EXISTS `groups`;
+DROP TABLE IF EXISTS userlist;
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS userlist (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
-    password_hash VARCHAR(255),
-    email VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create message list table
-CREATE TABLE IF NOT EXISTS messagelist (
-    message_id INT AUTO_INCREMENT PRIMARY KEY,
-    sender VARCHAR(50) NOT NULL,
-    message TEXT NOT NULL,
-    time TIMESTAMP NOT NULL,
-    receiver VARCHAR(50) NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (sender) REFERENCES userlist(username),
-    FOREIGN KEY (receiver) REFERENCES userlist(username)
-);
-
--- ✅ Create groups table (with backticks)
+-- Create groups table
 CREATE TABLE IF NOT EXISTS groups (
-    group_id INT AUTO_INCREMENT PRIMARY KEY,
-    group_name VARCHAR(50) NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    group_name VARCHAR(50) UNIQUE NOT NULL,
     created_by VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES userlist(username)
 );
 
--- ✅ Create group members table
+-- Create group members table
 CREATE TABLE IF NOT EXISTS group_members (
     group_id INT,
     username VARCHAR(50),
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (group_id, username),
-    FOREIGN KEY (group_id) REFERENCES groups(group_id),
+    FOREIGN KEY (group_id) REFERENCES groups(id),
     FOREIGN KEY (username) REFERENCES userlist(username)
 );
 
--- ✅ Create group messages table
-CREATE TABLE IF NOT EXISTS group_messages (
-    message_id INT AUTO_INCREMENT PRIMARY KEY,
-    group_id INT NOT NULL,
+-- Create messages table
+CREATE TABLE IF NOT EXISTS messagelist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
     sender VARCHAR(50) NOT NULL,
     message TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (group_id) REFERENCES groups(group_id),
-    FOREIGN KEY (sender) REFERENCES userlist(username)
+    time VARCHAR(20) NOT NULL,
+    receiver VARCHAR(50) NOT NULL,
+    is_group_message BOOLEAN DEFAULT FALSE,
+    group_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender) REFERENCES userlist(username),
+    FOREIGN KEY (group_id) REFERENCES groups(id)
 );
+
+-- Indexes for better performance
+CREATE INDEX idx_sender ON messagelist(sender);
+CREATE INDEX idx_receiver ON messagelist(receiver);
+CREATE INDEX idx_group_id ON messagelist(group_id);
+CREATE INDEX idx_username ON group_members(username);
+
+-- Sample data
+INSERT INTO userlist (username, password) VALUES 
+('admin', 'admin123'),
+('user1', 'pass123'),
+('user2', 'pass123');
+
+INSERT INTO groups (group_name, created_by) VALUES 
+('General', 'admin'),
+('Development', 'admin');
+
+INSERT INTO group_members (group_id, username) VALUES 
+(1, 'admin'),
+(1, 'user1'),
+(1, 'user2'),
+(2, 'admin'),
+(2, 'user1');
+
+INSERT INTO messagelist (sender, message, time, receiver, is_group_message, group_id) VALUES 
+('admin', 'Welcome to the General group!', '10:00', 'General', TRUE, 1),
+('user1', 'Hello everyone!', '10:05', 'General', TRUE, 1),
+('admin', 'Hi developers!', '10:10', 'Development', TRUE, 2),
+('user1', 'Hey admin', '10:15', 'admin', FALSE, NULL);

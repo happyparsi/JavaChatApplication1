@@ -1,37 +1,43 @@
 package chat.app.Client;
 
-import chat.app.Views.ChatUI;
+import java.io.BufferedReader;
 import java.io.IOException;
-import static java.lang.System.exit;
-import java.net.Socket;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
+import chat.app.Views.ChatUI;
 
 public class ClientListener implements Runnable {
-    
-    private Socket socket;
-    private Scanner in;
+    private final BufferedReader in;
+    private volatile boolean running = true;
     private ChatUI chatUI;
-            
-    public ClientListener(Socket socket, ChatUI chatUI) throws IOException{
-        this.socket = socket;
-        in = new Scanner(this.socket.getInputStream());
-        this.chatUI = chatUI;
+
+    public ClientListener(BufferedReader in) {
+        this.in = in;
     }
     
+    public void setChatUI(ChatUI chatUI) {
+        this.chatUI = chatUI;
+    }
+
     @Override
     public void run() {
-        String serverResponse = null;
-            try{
-                while (true){
-                    serverResponse = in.nextLine();
-                    chatUI.AddMessageToUI(serverResponse);
-                    System.out.println(serverResponse);
+        try {
+            String message;
+            while (running && (message = in.readLine()) != null) {
+                if (message.startsWith("MESSAGE ")) {
+                    // Format: MESSAGE <from> <content>
+                    String[] parts = message.substring(8).split(" ", 2);
+                    if (parts.length == 2 && chatUI != null) {
+                        chatUI.receiveMessage(parts[0], parts[1]);
+                    }
+                }
             }
-        } catch (NoSuchElementException e) { }
-            finally {
-                chatUI.RemoveUI();
-                exit(0);
-         }         
+        } catch (IOException e) {
+            if (running) {
+                System.err.println("Error reading from server: " + e.getMessage());
+            }
+        }
+    }
+
+    public void stop() {
+        running = false;
     }
 }

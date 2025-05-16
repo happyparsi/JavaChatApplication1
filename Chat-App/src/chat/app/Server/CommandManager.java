@@ -5,6 +5,7 @@ import chat.app.Database.MessageDB;
 import chat.app.Database.UserDB;
 import chat.app.Models.User;
 import java.sql.SQLException;
+import java.util.List;
 
 public class CommandManager {
     
@@ -33,7 +34,7 @@ public class CommandManager {
                     MessageManager.sendGroupMessage(command.substring(7), user);
                     //Store message to db
                     System.out.println("(Group" + user.getGroup().getGroupName() + ") " + user.getName() + " : " + command.substring(7));
-                    DBManager.InsertGroupMessageList(command.substring(7), "(Group " + user.getGroup().getGroupName() + ") " + user.getName(), user.getGroup());
+                    DBManager.saveGroupMessage(user.getName(), user.getGroup().getGroupName(), command.substring(7), Server.getServerTime());
                     break;
                 }
             }
@@ -114,7 +115,11 @@ public class CommandManager {
        // Broadcast message
        MessageManager.sendBroadcastMessage(command.substring(9), user);
        //Store message to db
-       DBManager.InsertManyMessageList(command.substring(9), user.getName());
+       for (User recipient : Server.getServerUserList()) {
+           if (!recipient.equals(user)) {
+               DBManager.savePrivateMessage(user.getName(), recipient.getName(), command.substring(9), Server.getServerTime());
+           }
+       }
     }
     
     public void command_singleUser() throws SQLException {
@@ -147,9 +152,7 @@ public class CommandManager {
                             else
                                 MessageManager.messageSenderAsServer(user.getWriter(),"User is offline. The message will be shown when the user is online.");
                             // Store message to db
-                            DBManager.InsertToMessageList(
-                                    new MessageDB(
-                                            user.getName(), message, Server.getServerTime().toString(), receiverName));
+                            DBManager.savePrivateMessage(user.getName(), receiverName, message, Server.getServerTime());
                             break;
                         }
                     }
@@ -196,18 +199,16 @@ public class CommandManager {
                     // Sends return message to client
                     MessageManager.messageSenderAsServer(user.getWriter(), "Welcome back " + user.getName());
                     // Retrieve messages from database and print it
-                    for (MessageDB message : DBManager.GetMessageList()) {
-                        // if receiver is current user
-                        if (message.getReceiver().equals(name)) {
-                            MessageManager.sendLoadedMessages(message.getMessage(), user, message.getSender(), message.getTime());
-                        }
+                    List<String> messages = DBManager.getPrivateMessages(name, user.getName());
+                    for (String message : messages) {
+                        MessageManager.sendLoadedMessages(message, user, name, Server.getServerTime());
                     }
                 }
                 else {
                     // Sends return message to client
                     MessageManager.messageSenderAsServer(user.getWriter(), "Connected Server as " + user.getName());
-                    // // Store user to db
-                    DBManager.InsertToUserList(new UserDB(name, ""));
+                    // Store user to db
+                    DBManager.registerUser(name, ""); // Note: In production, use proper password handling
                 }
                 //Then finalize the process
                 return;
